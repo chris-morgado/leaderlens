@@ -2,15 +2,12 @@ import json
 from typing import List, Dict
 import pandas as pd
 
-from llm_client import get_client
-
-client = get_client()
+from llm_client import get_response
 
 def chunk_list(items, chunk_size: int):
 	"""Yield successive 'chunk_size'-sized chunks from a list."""
 	for i in range(0, len(items), chunk_size):
 		yield items[i:i + chunk_size]
-
 
 def run_peer_analysis(semester: str, chunk_size: int) -> Dict:
 	"""
@@ -73,21 +70,76 @@ def run_peer_analysis(semester: str, chunk_size: int) -> Dict:
 	return overall_summary
 
 
-def analyze_peer_observations_chunk(
-	openers_acts_closers: List[str],
-	interactions: List[str],
-	improvements: List[str],
-	did_wells: List[str],
-	general_feedback: List[str],
-) -> Dict:
-	system_prompt = (
+def analyze_peer_observations_chunk(openers_acts_closers: List[str], interactions: List[str], improvements: List[str], did_wells: List[str], general_feedback: List[str]) -> Dict:
+    system_prompt = ANALYZE_CHUNK_SYSTEM_PROMPT
+    user_prompt = get_chunk_user_prompt(openers_acts_closers, interactions, improvements, did_wells, general_feedback,)
+
+    response = get_response(system_prompt, user_prompt)
+    json_text = response.output[0].content[0].text
+    return json.loads(json_text)
+
+
+def merge_peer_observation_summaries(chunk_summaries: List[Dict]) -> Dict:
+    system_prompt = MERGE_CHUNK_SYSTEM_PROMPT
+    user_prompt = get_merge_chunk_user_prompt(chunk_summaries)
+    
+    response = get_response(system_prompt, user_prompt)
+    json_text = response.output[0].content[0].text
+    return json.loads(json_text)
+
+
+ANALYZE_CHUNK_SYSTEM_PROMPT = (
 		"You are helping a Supplemental Instruction program manager analyze "
 		"peer observation forms for SI Leaders. You will be given lists of "
 		"qualitative comments about different aspects of sessions. "
 		"Use them to compute program-level metrics and summarize patterns."
 	)
 
-	user_prompt = f"""
+MERGE_CHUNK_SYSTEM_PROMPT = (
+		"You are aggregating multiple partial analyses of SI peer observations. "
+		"Each item in the list is a JSON summary computed for one subset (chunk) "
+		"of the data. Your job is to combine them into a single overall summary."
+	)
+
+def get_merge_chunk_user_prompt(chunk_summaries: List[Dict]) -> str:
+    return f"""
+Here are the chunk-level summaries as a JSON list: {json.dumps(chunk_summaries, indent=2)}
+Each item has this schema:
+{{
+  "openers_overall": "string",
+  "activities_overall": "string",
+  "closers_overall": "string",
+  "approx_percent_doing_openers": "string",
+  "interaction_overall": "string",
+  "common_improvements": ["string"],
+  "common_strengths": ["string"],
+  "common_red_flags": ["string"]
+}}
+
+### TASK
+
+Combine all of these into ONE overall summary with the SAME schema. 
+Reconcile differences by:
+- capturing patterns that show up across many chunks,
+- smoothing out percentages into a single rough estimate,
+- merging and deduplicating similar strengths/improvements/red flags.
+
+Return your answer as JSON with this exact structure and NOTHING else:
+
+{{
+  "openers_overall": "string",
+  "activities_overall": "string",
+  "closers_overall": "string",
+  "approx_percent_doing_openers": "string",
+  "interaction_overall": "string",
+  "common_improvements": ["string"],
+  "common_strengths": ["string"],
+  "common_red_flags": ["string"]
+}}
+"""
+
+def get_chunk_user_prompt(openers_acts_closers: List[str], interactions: List[str], improvements: List[str], did_wells: List[str], general_feedback: List[str]) -> str:
+    return f"""
 You are given peer observation comments from SI sessions.
 
 ### DATA
@@ -133,72 +185,3 @@ Return your answer as JSON with this exact structure and NOTHING else:
   "common_red_flags": ["string"]
 }}
 """
-
-	response = client.responses.create(
-		model="gpt-4.1-mini",
-		input=[
-			{"role": "system", "content": system_prompt},
-			{"role": "user", "content": user_prompt},
-		],
-	)
-
-	json_text = response.output[0].content[0].text
-	return json.loads(json_text)
-
-
-def merge_peer_observation_summaries(chunk_summaries: List[Dict]) -> Dict:
-	system_prompt = (
-		"You are aggregating multiple partial analyses of SI peer observations. "
-		"Each item in the list is a JSON summary computed for one subset (chunk) "
-		"of the data. Your job is to combine them into a single overall summary."
-	)
-
-	user_prompt = f"""
-Here are the chunk-level summaries as a JSON list:
-
-{json.dumps(chunk_summaries, indent=2)}
-
-Each item has this schema:
-{{
-  "openers_overall": "string",
-  "activities_overall": "string",
-  "closers_overall": "string",
-  "approx_percent_doing_openers": "string",
-  "interaction_overall": "string",
-  "common_improvements": ["string"],
-  "common_strengths": ["string"],
-  "common_red_flags": ["string"]
-}}
-
-### TASK
-
-Combine all of these into ONE overall summary with the SAME schema. 
-Reconcile differences by:
-- capturing patterns that show up across many chunks,
-- smoothing out percentages into a single rough estimate,
-- merging and deduplicating similar strengths/improvements/red flags.
-
-Return your answer as JSON with this exact structure and NOTHING else:
-
-{{
-  "openers_overall": "string",
-  "activities_overall": "string",
-  "closers_overall": "string",
-  "approx_percent_doing_openers": "string",
-  "interaction_overall": "string",
-  "common_improvements": ["string"],
-  "common_strengths": ["string"],
-  "common_red_flags": ["string"]
-}}
-"""
-
-	response = client.responses.create(
-		model="gpt-4.1-mini",
-		input=[
-			{"role": "system", "content": system_prompt},
-			{"role": "user", "content": user_prompt},
-		],
-	)
-
-	json_text = response.output[0].content[0].text
-	return json.loads(json_text)
