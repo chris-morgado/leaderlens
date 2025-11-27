@@ -1,2 +1,2 @@
 # leaderlens
-Automated analysis tool that processes SI session observation forms,
+LeaderLens is an AI-powered, automated analysis tool that processes SI session observation forms. It transforms forms into concise, actionable insights that surfaces program-wide trends and finds strengths and weaknesses for specific SI Leaders.
