@@ -9,8 +9,13 @@ load_dotenv()
 app = typer.Typer()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+def chunk_list(items, chunk_size: int):
+    """Yield successive 'chunk_size'-sized chunks from a list."""
+    for i in range(0, len(items), chunk_size):
+        yield items[i:i + chunk_size]
+
 @app.command()
-def peer(semester: str = "2251"):
+def peer(semester: str = "2251", chunk_size: int=10):
     try:
         print(f"Finding peer observation data...")
         df = pd.read_csv(f"data/peer{semester}.csv")
@@ -29,19 +34,36 @@ def peer(semester: str = "2251"):
         did_wells = df["did_well"].dropna().astype(str).tolist()
         general_feedback = df["general_feedback"].dropna().astype(str).tolist()
 
-        analysis = analyze_peer_observations(
-            openers_acts_closers,           
-            interactions,
-            improvements,
-            did_wells,
-            general_feedback,
-        )
+        # makes sure all lists are the same length (in case some columns have extra NAs)
+        n = min(len(openers_acts_closers), len(interactions), len(improvements), len(did_wells), len(general_feedback))
+        openers_acts_closers = openers_acts_closers[:n]
+        interactions = interactions[:n]
+        improvements = improvements[:n]
+        did_wells = did_wells[:n]
+        general_feedback = general_feedback[:n]
+        chunk_summaries: list[dict] = []
 
-        print(json.dumps(analysis, indent=2))
+        print(f"Total observations: {n}. Processing in chunks of {chunk_size}...")
+
+        for chunk_indices in chunk_list(list(range(n)), chunk_size):
+            o_chunk = [openers_acts_closers[i] for i in chunk_indices]
+            inter_chunk = [interactions[i] for i in chunk_indices]
+            imp_chunk = [improvements[i] for i in chunk_indices]
+            well_chunk = [did_wells[i] for i in chunk_indices]
+            fb_chunk = [general_feedback[i] for i in chunk_indices]
+
+            print(f"- Analyzing chunk with {len(chunk_indices)} observations...")
+            chunk_summary = analyze_peer_observations_chunk(o_chunk, inter_chunk, imp_chunk, well_chunk, fb_chunk)
+            chunk_summaries.append(chunk_summary)
+
+        print("merging chunk summaries into overall metrics...")
+        overall_summary = merge_peer_observation_summaries(chunk_summaries)
+        print(json.dumps(overall_summary, indent=2, ensure_ascii=False))
+
     except FileNotFoundError:
         print("Data not found.")
 
-def analyze_peer_observations(
+def analyze_peer_observations_chunk(
 	openers_acts_closers: list[str],
 	interactions: list[str],
 	improvements: list[str],
@@ -113,9 +135,74 @@ Return your answer as **JSON** with this exact structure and NOTHING else:
 	json_text = response.output[0].content[0].text
 	return json.loads(json_text)
 
+def merge_peer_observation_summaries(chunk_summaries: list[dict]) -> dict:
+    """
+    merges chunk-level peer observation summaries into a single overall summary
+    """
+
+    system_prompt = (
+        "You are aggregating multiple partial analyses of SI peer observations. "
+        "Each item in the list is a JSON summary computed for one subset (chunk) "
+        "of the data. Your job is to combine them into a single overall summary."
+    )
+
+    user_prompt = f"""
+Here are the chunk-level summaries as a JSON list:
+
+{json.dumps(chunk_summaries, indent=2)}
+
+Each item has this schema:
+{{
+  "openers_overall": "string",
+  "activities_overall": "string",
+  "closers_overall": "string",
+  "approx_percent_doing_openers": "string",
+  "interaction_overall": "string",
+  "common_improvements": ["string"],
+  "common_strengths": ["string"],
+  "common_red_flags": ["string"]
+}}
+
+### TASK
+
+Combine all of these into ONE overall summary with the SAME schema. 
+Reconcile differences by:
+- capturing patterns that show up across many chunks,
+- smoothing out percentages into a single rough estimate,
+- merging and deduplicating similar strengths/improvements/red flags.
+
+Return your answer as **JSON** with this exact structure and NOTHING else:
+
+{{
+  "openers_overall": "string",
+  "activities_overall": "string",
+  "closers_overall": "string",
+  "approx_percent_doing_openers": "string",
+  "interaction_overall": "string",
+  "common_improvements": ["string"],
+  "common_strengths": ["string"],
+  "common_red_flags": ["string"]
+}}
+"""
+
+    response = client.responses.create(
+        model="gpt-4.1-mini",
+        input=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+
+    json_text = response.output[0].content[0].text
+    return json.loads(json_text)
+
 @app.command()
 def full(semester: str = "2251"):
     print(f"Finding full observation data...")
+    print(f"right now using this for rate limit finds.. Limit Info:")
+
+    limit_info = client.api_limits()
+    print(limit_info)
 
 @app.command()
 def walkthrough(semester: str = "2251"):
