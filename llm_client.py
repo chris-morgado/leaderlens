@@ -11,10 +11,11 @@ def get_client() -> OpenAI:
 	return _client
 
 def get_response(system_prompt: str, user_prompt: str) -> dict:
-	response = _client.chat.completions.create(
-		model=MODEL,
-		input=[
+	response = _client.responses.create(
+		model = MODEL,
+		input = [
 			{"role": "system", "content": system_prompt},
 			{"role": "user", "content": user_prompt},
-		],	)
+		],	
+	)
 	return response

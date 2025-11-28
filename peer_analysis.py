@@ -71,6 +71,7 @@ def run_peer_analysis(semester: str, chunk_size: int) -> Dict:
 
 
 def analyze_peer_observations_chunk(openers_acts_closers: List[str], interactions: List[str], improvements: List[str], did_wells: List[str], general_feedback: List[str]) -> Dict:
+    """Analyze a chunk of peer observation comments and return a summary dict."""
     system_prompt = ANALYZE_CHUNK_SYSTEM_PROMPT
     user_prompt = get_chunk_user_prompt(openers_acts_closers, interactions, improvements, did_wells, general_feedback,)
 
@@ -80,9 +81,10 @@ def analyze_peer_observations_chunk(openers_acts_closers: List[str], interaction
 
 
 def merge_peer_observation_summaries(chunk_summaries: List[Dict]) -> Dict:
+    """Merge multiple chunk summaries into a single overall summary dict."""
     system_prompt = MERGE_CHUNK_SYSTEM_PROMPT
     user_prompt = get_merge_chunk_user_prompt(chunk_summaries)
-    
+
     response = get_response(system_prompt, user_prompt)
     json_text = response.output[0].content[0].text
     return json.loads(json_text)
@@ -109,7 +111,7 @@ Each item has this schema:
   "openers_overall": "string",
   "activities_overall": "string",
   "closers_overall": "string",
-  "approx_percent_doing_openers": "string",
+  "approx_percent_doing_closers": "string",
   "interaction_overall": "string",
   "common_improvements": ["string"],
   "common_strengths": ["string"],
@@ -130,7 +132,7 @@ Return your answer as JSON with this exact structure and NOTHING else:
   "openers_overall": "string",
   "activities_overall": "string",
   "closers_overall": "string",
-  "approx_percent_doing_openers": "string",
+  "approx_percent_doing_closers": "string",
   "interaction_overall": "string",
   "common_improvements": ["string"],
   "common_strengths": ["string"],
@@ -161,16 +163,16 @@ You are given peer observation comments from SI sessions.
 
 ### TASKS
 
-Using ONLY the information in these comments, answer the following program-level questions:
+Using ONLY the information in these comments, answer the following program-level questions. When showing percentages, just show (xx% are good):
 
-- How are all the openers?
-- How are all the activities?
-- How are all the closers? 
-- What percentage of SILs are doing openers? (give a rough estimate based on the comments you see)
-- How are most SILs interacting with their students?
-- What could most people be improving on?
-- What are most people doing well with?
-- Most common red flags (if any)?
+- What percentage of openers are good? In one sentence, how are all the openers?
+- What percentage of activities are good? In one sentence, how are all the activities?
+- What percentage of closers are good? In one sentence, how are all the closers? 
+- What percentage of SILs are doing closers? 
+- What percentage of SILs have good interactions with their students? How are most SILs interacting with their students?
+- What could most people be improving on? (in list form with a count of how many mentioned each)
+- What are most people doing well with? (in list form with a count of how many mentioned each)
+- Most common red flags (if any), in list form?
 
 Return your answer as JSON with this exact structure and NOTHING else:
 

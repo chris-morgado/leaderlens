@@ -1,11 +1,9 @@
 import json
 import typer
 
-from llm_client import get_client
 from peer_analysis import run_peer_analysis
 
 app = typer.Typer()
-client = get_client()
 
 CHUNK_SIZE = 10
 SEMESTER = "2251"
