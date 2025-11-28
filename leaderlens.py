@@ -2,6 +2,8 @@ import json
 import typer
 
 from peer_analysis import run_peer_analysis
+from full_analysis import run_full_analysis
+from walkthrough_analysis import run_walkthrough_analysis
 
 app = typer.Typer()
 
@@ -23,14 +25,14 @@ def peer(semester: str = SEMESTER, chunk_size: int = CHUNK_SIZE):
 @app.command()
 def full(semester: str = SEMESTER):
 	try:
-		pass
+		run_full_analysis(semester=semester)
 	except FileNotFoundError:
 		print("Data not found. Make sure data/full<semester>.csv exists.")
 
 @app.command()
 def walkthrough(semester: str = SEMESTER):
 	try:
-		pass
+		run_walkthrough_analysis(semester=semester)
 	except FileNotFoundError:
 		print("Data not found. Make sure data/walkthrough<semester>.csv exists.")
 

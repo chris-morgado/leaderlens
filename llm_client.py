@@ -11,6 +11,7 @@ def get_client() -> OpenAI:
 	return _client
 
 def get_response(system_prompt: str, user_prompt: str) -> dict:
+	"""Get a response from the LLM given system and user prompts."""
 	response = _client.responses.create(
 		model = MODEL,
 		input = [
@@ -19,3 +20,8 @@ def get_response(system_prompt: str, user_prompt: str) -> dict:
 		],	
 	)
 	return response
+
+def chunk_list(items, chunk_size: int):
+	"""Yield successive 'chunk_size'-sized chunks from a list."""
+	for i in range(0, len(items), chunk_size):
+		yield items[i:i + chunk_size]

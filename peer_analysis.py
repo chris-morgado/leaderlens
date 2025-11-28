@@ -2,12 +2,7 @@ import json
 from typing import List, Dict
 import pandas as pd
 
-from llm_client import get_response
-
-def chunk_list(items, chunk_size: int):
-	"""Yield successive 'chunk_size'-sized chunks from a list."""
-	for i in range(0, len(items), chunk_size):
-		yield items[i:i + chunk_size]
+from llm_client import get_response, chunk_list
 
 def run_peer_analysis(semester: str, chunk_size: int) -> Dict:
 	"""
