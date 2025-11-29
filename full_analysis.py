@@ -56,3 +56,21 @@ def run_full_analysis(semester: str) -> Dict:
         "Overall areas of strength for SI Leader. (Please copy your answer below into the email you send to the SI Leader.)": "overall_strengths",
         "Overall areas of improvement for SI Leader.  (Please copy your answer below into the email you send to the SI Leader.)": "overall_improvements",
     })
+
+    full_obs = (df["session_type"] == "Full observation").mean() * 100
+    coaching_obs = (df["session_type"] == "Coaching session (i.e., no students have shown up in the first 15 minutes)").mean() * 100
+    print(f"\nFull Observations:\t\t\t{coaching_obs:.2f}%\nCoaching Sessions:\t\t\t{full_obs:.2f}%\n")
+
+    percent_dict = dict()
+    percent_dict["Uses varied collab. tech.:\t\t"] = (df["uses_varied_collab_techniques"] == "No").mean() * 100
+    percent_dict["Uses varied learning styles:\t\t"] = (df["uses_varied_learning_styles"] == "No").mean() * 100
+    percent_dict["Includes study strategies:\t\t"] = (df["includes_study_strategies"] == "No").mean() * 100
+    percent_dict["Redirects questions:\t\t\t"] = (df["redirects_questions"] == "No").mean() * 100
+    percent_dict["Breaks down concepts:\t\t\t"] = (df["breaks_down_concepts"] == "No").mean() * 100
+    percent_dict["Uses wait time:\t\t\t\t"] = (df["uses_wait_time"] == "No").mean() * 100
+    percent_dict["Checks for understanding:\t\t"] = (df["checks_understanding"] == "No").mean() * 100
+    percent_dict["Encourages interaction:\t\t\t"] = (df["encourages_interaction"] == "No").mean() * 100
+    percent_dict["Ensures accuracy:\t\t\t"] = (df["ensures_accuracy"] == "No").mean() * 100
+    percent_dict["Balances productivity/flex:\t\t"] = (df["balances_productivity_flexibility"] == "No").mean() * 100
+    for key, value in sorted(percent_dict.items(), key=lambda item: item[1], reverse=True):
+        print(f"{key} {value:.2f}% 'No'")
