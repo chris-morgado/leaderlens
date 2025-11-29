@@ -61,16 +61,37 @@ def run_full_analysis(semester: str) -> Dict:
     coaching_obs = (df["session_type"] == "Coaching session (i.e., no students have shown up in the first 15 minutes)").mean() * 100
     print(f"\nFull Observations:\t\t\t{coaching_obs:.2f}%\nCoaching Sessions:\t\t\t{full_obs:.2f}%\n")
 
-    percent_dict = dict()
-    percent_dict["Uses varied collab. tech.:\t\t"] = (df["uses_varied_collab_techniques"] == "No").mean() * 100
-    percent_dict["Uses varied learning styles:\t\t"] = (df["uses_varied_learning_styles"] == "No").mean() * 100
-    percent_dict["Includes study strategies:\t\t"] = (df["includes_study_strategies"] == "No").mean() * 100
-    percent_dict["Redirects questions:\t\t\t"] = (df["redirects_questions"] == "No").mean() * 100
-    percent_dict["Breaks down concepts:\t\t\t"] = (df["breaks_down_concepts"] == "No").mean() * 100
-    percent_dict["Uses wait time:\t\t\t\t"] = (df["uses_wait_time"] == "No").mean() * 100
-    percent_dict["Checks for understanding:\t\t"] = (df["checks_understanding"] == "No").mean() * 100
-    percent_dict["Encourages interaction:\t\t\t"] = (df["encourages_interaction"] == "No").mean() * 100
-    percent_dict["Ensures accuracy:\t\t\t"] = (df["ensures_accuracy"] == "No").mean() * 100
-    percent_dict["Balances productivity/flex:\t\t"] = (df["balances_productivity_flexibility"] == "No").mean() * 100
-    for key, value in sorted(percent_dict.items(), key=lambda item: item[1], reverse=True):
-        print(f"{key} {value:.2f}% 'No'")
+    requirements_dict = dict()
+    requirements_dict["Uses varied collab. tech.:\t\t"]      = get_percentage("uses_varied_collab_techniques", df)
+    requirements_dict["Uses varied learning styles:\t\t"]    = get_percentage("uses_varied_learning_styles", df)
+    requirements_dict["Includes study strategies:\t\t"]      = get_percentage("includes_study_strategies", df)
+    requirements_dict["Redirects questions:\t\t\t"]          = get_percentage("redirects_questions", df)
+    requirements_dict["Breaks down concepts:\t\t\t"]         = get_percentage("breaks_down_concepts", df)
+    requirements_dict["Uses wait time:\t\t\t\t"]             = get_percentage("uses_wait_time", df)
+    requirements_dict["Checks for understanding:\t\t"]       = get_percentage("checks_understanding", df)
+    requirements_dict["Encourages interaction:\t\t\t"]       = get_percentage("encourages_interaction", df)
+    requirements_dict["Ensures accuracy:\t\t\t"]             = get_percentage("ensures_accuracy", df)
+    requirements_dict["Balances productivity/flex:\t\t"]     = get_percentage("balances_productivity_flexibility", df)
+    print("Session Requirements:")
+    for key, value in sorted(requirements_dict.items(), key=lambda item: item[1], reverse=True):
+        print(f"{key} {value:.2f}% 'No' or 'Unsure'")
+
+    atmosphere_dict = dict()
+    atmosphere_dict["Demonstrates respect:\t\t\t"]          = get_percentage("rate_respect", df)
+    atmosphere_dict["Connects with all students:\t\t"]      = get_percentage("rate_connection", df)
+    atmosphere_dict["Fosters comfortable environment:\t"]   = get_percentage("rate_comfort_environment", df)
+    atmosphere_dict["Praises & encourages:\t\t\t"]         = get_percentage("rate_praise", df)
+    atmosphere_dict["Uses students' names:\t\t\t"]         = get_percentage("rate_uses_names", df)
+    atmosphere_dict["Professional manner:\t\t\t"]          = get_percentage("rate_professionalism", df)
+    atmosphere_dict["Models excitement:\t\t\t"]            = get_percentage("rate_excited", df)
+    atmosphere_dict["Includes all students:\t\t\t"]       = get_percentage("rate_includes_all_students", df)
+    atmosphere_dict["Most participated:\t\t\t"]            = get_percentage("rate_participation", df)
+    atmosphere_dict["Learning was student led:\t\t"]      = get_percentage("rate_student_led", df)
+    print("\nSession Atmosphere:") 
+    for key, value in sorted(atmosphere_dict.items(), key=lambda item: item[1], reverse=True):
+        print(f"{key} {value:.2f}% 'No' or 'Unsure'")
+    
+
+def get_percentage(key: str, df: pd.DataFrame):
+    mask = df[key].isin(["No", "Unsure"])
+    return mask.mean() * 100
